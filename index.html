@@ -59,7 +59,6 @@
             font-size: 1.2rem;
         }
         
-        /* Rest of styles from previous version... keeping it compact */
         .lang-btn, .diff-btn {
             padding: 20px 30px;
             margin: 10px;
@@ -86,7 +85,7 @@
             box-shadow: 0 0 20px var(--accent);
         }
         
-        .start-btn {
+        .start-btn, .submit-btn {
             padding: 20px 60px;
             background: linear-gradient(90deg, var(--accent), #00cc6a);
             border: none;
@@ -100,9 +99,14 @@
             text-transform: uppercase;
         }
         
-        .start-btn:hover {
+        .start-btn:hover, .submit-btn:hover {
             transform: scale(1.05);
             box-shadow: 0 10px 40px rgba(0,255,136,0.5);
+        }
+        
+        .submit-btn {
+            font-size: 1.2rem;
+            padding: 15px 40px;
         }
         
         .quiz-card {
@@ -128,6 +132,7 @@
             margin: 20px 0;
             font-family: 'Roboto Mono', monospace;
             overflow-x: auto;
+            white-space: pre-wrap;
         }
         
         .option-btn {
@@ -159,18 +164,6 @@
             font-size: 1.2rem;
             border-radius: 10px;
             margin: 20px 0;
-        }
-        
-        .submit-btn {
-            padding: 15px 40px;
-            background: var(--accent);
-            border: none;
-            color: var(--bg-primary);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 700;
-            cursor: pointer;
-            border-radius: 10px;
         }
         
         .feedback {
@@ -212,9 +205,6 @@
         
         .hidden { display: none !important; }
         
-        .keyword { color: #ff79c6; font-weight: 700; }
-        .number { color: #bd93f9; }
-        
         .badge-bnm { background: linear-gradient(90deg, #ff6b6b, #ff4444); }
         .badge-python { background: linear-gradient(90deg, #4169E1, #1E90FF); }
         .badge-lua { background: linear-gradient(90deg, #000080, #0000CD); }
@@ -243,6 +233,7 @@
             border-radius: 10px;
             border: 2px solid var(--accent);
             font-size: 0.9rem;
+            display: none;
         }
         
         @media (max-width: 768px) {
@@ -252,11 +243,11 @@
     </style>
 </head>
 <body>
-    <div class="api-status" id="apiStatus">⚡ API: Ready</div>
+    <div class="api-status" id="apiStatus">⚡ AI: Ready</div>
     
     <div class="header">
         <h1 class="title">🔓 BNM Modding Academy</h1>
-        <p class="subtitle">Master Android IL2CPP Game Hacking • Real Code • Real Hacks</p>
+        <p class="subtitle">Master Android IL2CPP Game Hacking • 1,507 Real Questions</p>
     </div>
     
     <div class="container">
@@ -267,8 +258,8 @@
                 </h2>
                 <p style="color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6;">
                     Choose your language and difficulty.<br>
-                    <strong style="color: var(--success);">✓ Powered by Claude AI</strong> - Infinite unique questions<br>
-                    <strong style="color: var(--warning);">⚡ 300+ base questions per category</strong><br>
+                    <strong style="color: var(--success);">✓ 1,507 base questions</strong><br>
+                    <strong style="color: var(--warning);">⚡ +Infinite AI questions (optional)</strong><br>
                     Learn real game modding - no definitions, pure coding!
                 </p>
             </div>
@@ -295,18 +286,15 @@
                 <button class="diff-btn diff-intermediate" onclick="selectDifficulty('intermediate')">
                     INTERMEDIATE
                 </button>
-                <button class="diff-btn diff-advanced" onclick="selectDifficulty('advanced')">
-                    ADVANCED
-                </button>
-                <button class="diff-btn diff-expert" onclick="selectDifficulty('expert')">
-                    EXPERT
-                </button>
                 
                 <div style="margin-top: 30px;">
                     <label style="font-size: 1rem; color: var(--text-secondary); cursor: pointer;">
                         <input type="checkbox" id="aiToggle" checked style="margin-right: 10px;">
-                        ⚡ Enable AI Infinite Mode (Requires hosted version)
+                        ⚡ Enable AI Infinite Mode (Free - No API key needed!)
                     </label>
+                    <div style="font-size: 0.8rem; color: var(--success); margin-top: 10px;">
+                        💡 Powered by Hugging Face free API • Works from browsers!
+                    </div>
                 </div>
                 
                 <button class="start-btn" onclick="startQuiz()" style="margin-top: 50px;">
@@ -349,7 +337,6 @@
     </div>
     
     <script>
-        // Global variables
         let selectedLanguage = null;
         let selectedDifficulty = null;
         let currentQuestion = 0;
@@ -360,12 +347,29 @@
         let filteredQuestions = [];
         let startTime = null;
         let currentShuffledOptions = [];
-        let aiEnabled = true;
+        let aiEnabled = false;
         let isGeneratingQuestion = false;
         
-        // CLAUDE API CONFIGURATION
-        const API_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-        const API_MODEL = 'claude-sonnet-4-20250514';
+        document.addEventListener('DOMContentLoaded', function() {
+            const aiToggle = document.getElementById('aiToggle');
+            const apiStatus = document.getElementById('apiStatus');
+            
+            aiToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    apiStatus.style.display = 'block';
+                    aiEnabled = true;
+                } else {
+                    apiStatus.style.display = 'none';
+                    aiEnabled = false;
+                }
+            });
+            
+            // Check on load
+            if (aiToggle.checked) {
+                apiStatus.style.display = 'block';
+                aiEnabled = true;
+            }
+        });
         
         function selectLanguage(lang) {
             selectedLanguage = lang;
@@ -385,7 +389,9 @@
             }
         }
         
-        // CLAUDE AI QUESTION GENERATOR
+        // HUGGING FACE FREE API - Works from browsers!
+        const HF_API_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
+        
         async function generateAIQuestion() {
             if (isGeneratingQuestion || !aiEnabled) return null;
             isGeneratingQuestion = true;
@@ -393,75 +399,110 @@
             document.getElementById('apiStatus').textContent = '⏳ Generating...';
             
             const languageDesc = {
-                bnm: 'BNM (ByNameModding) for Android IL2CPP game modding - focus on real hacks like god mode, speed hacks, coin multipliers, method hooking, field modification',
-                python: 'Python programming - practical coding challenges, debugging, algorithms',
-                lua: 'Lua for Roblox game development - scripting, events, RemoteEvents, game mechanics',
-                cpp: 'C++ programming - pointers, memory management, STL, algorithms'
+                bnm: 'BNM (ByNameModding) for Android IL2CPP game modding',
+                python: 'Python programming',
+                lua: 'Lua for Roblox',
+                cpp: 'C++ programming'
             };
             
-            const difficultyDesc = {
-                beginner: 'Basic fundamentals - simple syntax, core concepts, fill-in-the-blank code',
-                intermediate: 'Practical applications - real problem solving, working code examples',
-                advanced: 'Complex challenges - advanced techniques, optimization, best practices',
-                expert: 'Expert-level - complex algorithms, architecture, performance optimization'
-            };
-            
-            const prompt = `Generate a unique, practical coding question for ${languageDesc[selectedLanguage]} at ${selectedDifficulty} level (${difficultyDesc[selectedDifficulty]}).
+            const prompt = `Generate a coding question for ${languageDesc[selectedLanguage]} at ${selectedDifficulty} level.
 
-${selectedLanguage === 'bnm' ? `CRITICAL FOR BNM: Focus on REAL MODDING:
-- Finding classes: BNM::Class::Find("ClassName")
-- Getting fields: GetField<type>("fieldName")
-- Method hooking for hacks
-- Actual game hacks: god mode (TakeDamage hook), speed hacks, unlimited coins, infinite ammo
-- Real IL2CPP concepts students need to know
-Make it teach PRACTICAL MODDING, not theory.` : ''}
+Return ONLY valid JSON:
+{"question":"Task","description":"Why","code":"code with ___","correctAnswers":["ans"],"explanation":"Why"}
 
-Return ONLY JSON, no markdown:
-{
-  "type": "code",
-  "question": "Brief task description",
-  "description": "Why this matters",
-  "code": "code with ___ blank or empty string",
-  "correctAnswers": ["answer1", "answer2"],
-  "explanation": "What they learned"
-}`;
+Example:
+{"question":"Find class:","description":"Lookup.","code":"auto p = BNM::Class::___(\"Player\");","correctAnswers":["Find"],"explanation":"Find()!"}
+
+Generate ${selectedLanguage} ${selectedDifficulty}:`;
 
             try {
-                const response = await fetch(API_ENDPOINT, {
+                const response = await fetch(HF_API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'anthropic-version': '2023-06-01'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: API_MODEL,
-                        max_tokens: 1000,
-                        messages: [{ role: 'user', content: prompt }]
+                        inputs: prompt,
+                        parameters: { max_new_tokens: 200, temperature: 0.7, return_full_text: false }
                     })
                 });
                 
-                if (!response.ok) throw new Error('API Error');
+                if (!response.ok) throw new Error('API failed');
                 
                 const data = await response.json();
-                let content = data.content[0].text.trim();
-                content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                let text = data[0]?.generated_text || data.generated_text || data;
                 
-                const questionData = JSON.parse(content);
-                questionData.language = selectedLanguage;
-                questionData.difficulty = selectedDifficulty;
-                questionData.isAIGenerated = true;
-                if (!questionData.code) questionData.code = '';
+                const jsonMatch = text.match(/\{[\s\S]*"correctAnswers"[\s\S]*\}/);
+                if (!jsonMatch) return generateFallbackQuestion();
                 
-                document.getElementById('apiStatus').textContent = '✅ API: Ready';
+                const q = JSON.parse(jsonMatch[0]);
+                q.language = selectedLanguage;
+                q.difficulty = selectedDifficulty;
+                q.type = 'code';
+                q.isAIGenerated = true;
+                if (!q.code) q.code = '';
+                
+                document.getElementById('apiStatus').textContent = '✅ AI: Ready';
                 isGeneratingQuestion = false;
-                return questionData;
+                return q;
                 
             } catch (error) {
-                console.error('[API Error]:', error);
-                document.getElementById('apiStatus').textContent = '❌ API Failed';
+                document.getElementById('apiStatus').textContent = '⚠️ Using fallback';
                 isGeneratingQuestion = false;
-                return null;
+                return generateFallbackQuestion();
             }
+        }
+        
+        function generateFallbackQuestion() {
+            const templates = {
+                bnm: {
+                    beginner: [
+                        {question:'Find Enemy class:',description:'Class lookup.',code:'auto e = BNM::Class::___("Enemy");',correctAnswers:['Find'],explanation:'Find() searches!'},
+                        {question:'Get health field:',description:'Int field.',code:'auto hp = cls.GetField<___>("health");',correctAnswers:['int'],explanation:'int!'},
+                        {question:'Set coins to 9999:',description:'Money hack.',code:'coinsField.___(inst, 9999);',correctAnswers:['set'],explanation:'set()!'},
+                        {question:'Call Update:',description:'Method.',code:'updateMethod.___(instance);',correctAnswers:['call'],explanation:'call()!'},
+                    ],
+                    intermediate: [
+                        {question:'God mode hook:',description:'Block damage.',code:'void new_TD(void* i,float d){___ ;}',correctAnswers:['return'],explanation:'return blocks!'},
+                        {question:'10x coins:',description:'Multiplier.',code:'void new_AC(void* i,int a){old_AC(i,a___10);}',correctAnswers:['*'],explanation:'Multiply!'},
+                        {question:'Free premium:',description:'Bypass.',code:'bool new_IP(void* i){return ___;}',correctAnswers:['true'],explanation:'Always true!'},
+                    ]
+                },
+                python: {
+                    beginner: [
+                        {question:'Add to list:',description:'Method.',code:'nums.___(5)',correctAnswers:['append'],explanation:'append()!'},
+                        {question:'Last item:',description:'Index.',code:'last = arr[___]',correctAnswers:['-1'],explanation:'-1!'},
+                        {question:'Loop 0-9:',description:'For.',code:'___ i in range(10):',correctAnswers:['for'],explanation:'for!'},
+                    ],
+                    intermediate: [
+                        {question:'Lambda:',description:'Function.',code:'f = ___ x: x*2',correctAnswers:['lambda'],explanation:'lambda!'},
+                        {question:'Try block:',description:'Exception.',code:'___:\n  risky()',correctAnswers:['try'],explanation:'try!'},
+                    ]
+                },
+                lua: {
+                    beginner: [
+                        {question:'Anchor part:',description:'Lock.',code:'part.Anchored = ___',correctAnswers:['true'],explanation:'true!'},
+                        {question:'Red color:',description:'RGB.',code:'part.Color = Color3.fromRGB(___,0,0)',correctAnswers:['255'],explanation:'255!'},
+                    ],
+                    intermediate: [
+                        {question:'Super speed:',description:'Speed.',code:'hum.___ = 100',correctAnswers:['WalkSpeed'],explanation:'WalkSpeed!'},
+                        {question:'Fire to server:',description:'Remote.',code:'event:___(data)',correctAnswers:['FireServer'],explanation:'FireServer()!'},
+                    ]
+                },
+                cpp: {
+                    beginner: [
+                        {question:'Declare int:',description:'Type.',code:'___ x = 5;',correctAnswers:['int'],explanation:'int!'},
+                        {question:'Get address:',description:'Pointer.',code:'int* p = ___x;',correctAnswers:['&'],explanation:'&!'},
+                    ],
+                    intermediate: [
+                        {question:'Define class:',description:'OOP.',code:'___ MyClass {\n};',correctAnswers:['class'],explanation:'class!'},
+                        {question:'Push to vector:',description:'Add.',code:'v.___(5);',correctAnswers:['push_back'],explanation:'push_back()!'},
+                    ]
+                }
+            };
+            
+            const pool = templates[selectedLanguage]?.[selectedDifficulty] || templates.bnm.beginner;
+            const q = pool[Math.floor(Math.random() * pool.length)];
+            
+            return {...q, language: selectedLanguage, difficulty: selectedDifficulty, type: 'code', isAIGenerated: true};
         }
         
         async function ensureQuestionsAvailable() {
@@ -469,7 +510,6 @@ Return ONLY JSON, no markdown:
             
             const remaining = filteredQuestions.length - currentQuestion;
             if (remaining < 5 && !isGeneratingQuestion) {
-                console.log('[AI] Generating 3 new questions...');
                 for (let i = 0; i < 3; i++) {
                     const q = await generateAIQuestion();
                     if (q) filteredQuestions.push(q);
@@ -483,36 +523,29 @@ Return ONLY JSON, no markdown:
                 return;
             }
             
-            aiEnabled = document.getElementById('aiToggle').checked;
-            
-            // Load base questions from questions.js
             if (typeof questions === 'undefined') {
-                alert('ERROR: questions.js not loaded! Make sure both files are in the same folder.');
+                alert('ERROR: questions.js not loaded!');
                 return;
             }
             
-            // Filter questions by language and difficulty
             filteredQuestions = questions.filter(q => 
                 q.language === selectedLanguage && q.difficulty === selectedDifficulty
             );
             
-            // Shuffle the base questions
             filteredQuestions = shuffleArray(filteredQuestions);
             
             console.log(`[LOADED] ${filteredQuestions.length} questions for ${selectedLanguage} ${selectedDifficulty}`);
             
-            // Pre-generate AI questions if enabled and hosted
             if (aiEnabled) {
-                document.getElementById('apiStatus').textContent = '⏳ Loading AI...';
-                for (let i = 0; i < 10; i++) {
+                document.getElementById('apiStatus').textContent = '⏳ Generating...';
+                for (let i = 0; i < 5; i++) {
                     const q = await generateAIQuestion();
                     if (q) filteredQuestions.push(q);
                 }
-                document.getElementById('apiStatus').textContent = '✅ API: Ready';
             }
             
             if (filteredQuestions.length === 0) {
-                alert('No questions available for this combination!');
+                alert('No questions available!');
                 return;
             }
             
@@ -554,30 +587,17 @@ Return ONLY JSON, no markdown:
                 html += `<div class="code-block">${escapeHtml(q.code)}</div>`;
             }
             
-            if (q.type === 'multiple') {
-                currentShuffledOptions = shuffleArray(q.options.map((opt, idx) => ({text: opt, originalIndex: idx})));
-                html += '<div>';
-                currentShuffledOptions.forEach((option, index) => {
-                    html += `<button class="option-btn" onclick="selectOption(${index})">${option.text}</button>`;
-                });
-                html += '</div>';
-            } else {
-                html += `
-                    <input type="text" class="input-answer" id="answerInput" 
-                           placeholder="TYPE YOUR ANSWER..." 
-                           onkeypress="if(event.key==='Enter') checkAnswer()">
-                    <button class="submit-btn" onclick="checkAnswer()">SUBMIT</button>
-                `;
-            }
+            html += `
+                <input type="text" class="input-answer" id="answerInput" 
+                       placeholder="TYPE YOUR ANSWER..." 
+                       onkeypress="if(event.key==='Enter') checkAnswer()">
+                <button class="submit-btn" onclick="checkAnswer()">SUBMIT</button>
+                <div class="feedback" id="feedback"></div></div>
+            `;
             
-            html += `<div class="feedback" id="feedback"></div></div>`;
             container.innerHTML = html;
             updateStats();
-            
-            if (q.type === 'code') {
-                document.getElementById('answerInput').focus();
-            }
-            
+            document.getElementById('answerInput').focus();
             ensureQuestionsAvailable();
         }
         
@@ -585,31 +605,6 @@ Return ONLY JSON, no markdown:
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-        
-        function shuffleArray(array) {
-            const arr = [...array];
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-            return arr;
-        }
-        
-        function selectOption(index) {
-            const q = filteredQuestions[currentQuestion];
-            const originalIndex = currentShuffledOptions[index].originalIndex;
-            
-            if (originalIndex === q.correct) {
-                score += 100;
-                streak++;
-                maxStreak = Math.max(maxStreak, streak);
-                correctAnswers++;
-                showFeedback(true, q.explanation);
-            } else {
-                streak = 0;
-                showFeedback(false, q.explanation);
-            }
         }
         
         function checkAnswer() {
@@ -694,7 +689,6 @@ Return ONLY JSON, no markdown:
         }
     </script>
     
-    <!-- Load questions database -->
     <script src="questions.js"></script>
 </body>
 </html>
